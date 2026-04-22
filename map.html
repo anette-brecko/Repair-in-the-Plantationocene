@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Display 4 GeoJSONs</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #map { height: 100%; width: 100%; }
+
+        .info.legend {
+            display: flex;
+            flex-direction: column; 
+            gap: 15px;             
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            font: 16px Verdana, Helvetica, sans-serif;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;    
+        }
+
+        .legend-item i {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        L.TileLayer.prototype.options.referrerPolicy = 'strict-origin-when-cross-origin';
+
+        const map = L.map('map').setView([17.935198, -76.269883], 12);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors © CARTO',
+        }).addTo(map);
+
+        async function addGeoJsonLayer(url, color) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                L.geoJSON(data, {
+                    style: {
+                        color: color,
+                        weight: 2,
+                        fillOpacity: 1
+                    },
+                    onEachFeature: (feature, layer) => {
+                        if (feature.properties) {
+                            layer.bindPopup(JSON.stringify(feature.properties));
+                        }
+                    }
+                }).addTo(map);
+            } catch (err) {
+                console.error(`Failed to load GeoJSON from ${url}:`, err);
+            }
+        }
+
+        addGeoJsonLayer('data/blue.geojson', 'blue');
+        addGeoJsonLayer('data/purple.geojson', 'purple');
+        addGeoJsonLayer('data/red.geojson', 'red');
+
+        const legendData = [
+            { label: 'Areas Prone to Flooding', color: 'red' },
+            { label: 'Residences', color: 'purple' },
+            { label: 'Employment Locations', color: 'blue' },
+        ];
+
+        const legend = L.control({ position: 'bottomright' });
+
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            
+            legendData.forEach(item => {
+                div.innerHTML += 
+                    `<div class="legend-item">
+                        <i style="background: ${item.color}"></i> 
+                        <span>${item.label}</span>
+                    </div>`;
+            });
+
+            return div;
+        };
+        legend.addTo(map);
+
+    </script>
+</body>
+</html>
